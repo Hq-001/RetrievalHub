@@ -1,0 +1,83 @@
+# RetrievalHub K8s Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: retrievalhub
+  labels:
+    app: retrievalhub
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: retrievalhub
+  template:
+    metadata:
+      labels:
+        app: retrievalhub
+    spec:
+      containers:
+        - name: retrievalhub
+          image: retrievalhub:latest
+          ports:
+            - containerPort: 8000
+              name: rest
+            - containerPort: 8001
+              name: mcp-sse
+          envFrom:
+            - secretRef:
+                name: retrievalhub-secrets
+          env:
+            - name: REST_HOST
+              value: "0.0.0.0"
+            - name: LOG_LEVEL
+              value: "INFO"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: retrievalhub-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: retrievalhub
+spec:
+  selector:
+    app: retrievalhub
+  ports:
+    - name: rest
+      port: 8000
+      targetPort: 8000
+    - name: mcp-sse
+      port: 8001
+      targetPort: 8001
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: retrievalhub-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi

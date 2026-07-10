@@ -9,6 +9,11 @@ from fastapi import FastAPI
 
 from retrievalhub.api.documents import router as documents_router, set_dependencies
 from retrievalhub.api.health import router as health_router
+from retrievalhub.api.middleware import (
+    APIKeyMiddleware,
+    RateLimitMiddleware,
+    RequestLoggingMiddleware,
+)
 from retrievalhub.config import get_settings
 from retrievalhub.embedders.embedder import MockEmbedder
 from retrievalhub.ingest.enqueue import InProcessEnqueueBackend
@@ -100,12 +105,19 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """创建 FastAPI 应用实例。"""
+    settings = get_settings()
+
     app = FastAPI(
         title="RetrievalHub",
         description="个人智能知识库检索中间件 - RAG-Ready 检索基础设施",
         version="0.1.0",
         lifespan=lifespan,
     )
+
+    # 中间件（按注册顺序逆序执行：最后注册的最先执行）
+    app.add_middleware(RequestLoggingMiddleware)
+    app.add_middleware(RateLimitMiddleware, max_rps=20, burst=50)
+    app.add_middleware(APIKeyMiddleware, api_key=settings.api_key)
 
     app.include_router(health_router)
     app.include_router(documents_router)
