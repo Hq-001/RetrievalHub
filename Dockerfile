@@ -12,21 +12,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml README.md ./
 COPY src/ ./src/
 
-# 安装依赖到构建阶段
-RUN pip install --no-cache-dir -e ".[dev]"
+# 安装依赖到构建阶段（非 editable 安装，包会被复制到 site-packages）
+RUN pip install --no-cache-dir ".[dev]"
 
 # ---- 运行阶段 ----
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# 从构建阶段复制已安装的包
+# 从构建阶段复制已安装的包（含 retrievalhub 包本身，已在 site-packages 中）
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
-
-# 复制源码
-COPY --from=builder /build/src/ ./src/
-COPY pyproject.toml ./
 
 # 创建数据目录
 RUN mkdir -p /app/data/originals

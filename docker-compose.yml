@@ -1,6 +1,4 @@
 # RetrievalHub Docker Compose
-version: "3.8"
-
 services:
   retrievalhub:
     build: .
@@ -9,9 +7,7 @@ services:
       - "8000:8000"
       - "8001:8001"
     volumes:
-      - lancedb_data:/app/data/lancedb
-      - sqlite_data:/app/data/metadata.db
-      - originals_data:/app/data/originals
+      - app_data:/app/data
     env_file:
       - .env
     environment:
@@ -28,6 +24,4 @@ services:
       retries: 3
 
 volumes:
-  lancedb_data:
-  sqlite_data:
-  originals_data:
+  app_data:
